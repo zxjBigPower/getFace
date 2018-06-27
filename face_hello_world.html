@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>tracking.js - face hello world</title>
+  <!--<link rel="stylesheet" href="assets/demo.css">-->
+
+  <script src="./build/tracking-min.js"></script>
+  <script src="./build/data/face-min.js"></script>
+  <!--<script src=”http://html5shiv.googlecode.com/svn/trunk/html5.js”></script>-->
+  <!--<script src="../build/data/eye-min.js"></script>-->
+  <!--<script src="../build/data/mouth-min.js"></script>-->
+
+  <style>
+    .addBorder{
+      border:1px solid #ccc;
+    }
+    .con {
+      position: relative;
+    }
+
+    #can {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .box{
+      width: 600px;
+      height: 600px;
+      overflow: hidden;
+    }
+    #file{
+
+    }
+  </style>
+</head>
+<body>
+<div class="demo-title">
+  <!--<p><a href="http://trackingjs.com" target="_parent">tracking.js</a> － detect faces, eyes and mouths in a image</p>-->
+</div>
+<form id="imgForm">
+  <input type="file" class="addBorder" id="file">
+</form>
+
+<div class="box">
+  <div class="con">
+    <img  id="img" alt="" >
+    <canvas id="can"></canvas>
+  </div>
+</div>
+
+<!--<canvas id="fff"></canvas>-->
+<button id="btn">下载人脸</button>
+<div id="face"></div>
+</div>
+<!---->
+<script>
+  window.onload = function () {
+
+
+
+
+//canvas保存为图片
+    function convertBase64UrlToBlob(urlData, type) {
+      var bytes = window.atob(urlData.split(',')[1]);        //去掉url的头，并转换为byte
+      //处理异常,将ascii码小于0的转换为大于0
+      var ab = new ArrayBuffer(bytes.length);
+      var ia = new Uint8Array(ab);
+      for (var i = 0; i < bytes.length; i++) {
+        ia[i] = bytes.charCodeAt(i);
+      }
+      return new Blob([ab], {type: 'image/' + type});
+    }
+
+    //blob转filedata
+    function convertBase64UrlToFile(urlData) {
+      var arr = urlData.split(','),
+        type = arr[0].match(/:(.*?);/)[1],
+        fileExt = mime.split('/')[1],
+        bstr = atob(arr[1]),
+        n = bstr.length,
+        u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], "fileName." + fileExt, {type: type});
+    }
+
+
+    var file=document.getElementById("file");
+    file.onchange=function (ev) {
+      var img = document.getElementById("img");
+
+      var btn = document.getElementById("btn");
+      var can = document.getElementById("can");
+      var face = document.getElementById("face");
+      // var fff = document.getElementById("fff");
+
+      // fff.width =64;
+      // fff.height =83;
+      // fff = fff.getContext("2d")
+      var context = can.getContext('2d');
+
+      console.log(this.files[0]);
+      var imgfile=this.files[0];
+      //创建读取文件的对象
+      var reader = new FileReader();
+
+      //创建文件读取相关的变量
+      //var imgFile;
+      //正式读取文件
+      reader.readAsDataURL(imgfile);
+      //为文件读取成功设置事件
+      reader.onload=function(e) {
+        //alert('文件读取完成');
+        var imgages=new Image();
+        imgages.src= e.target.result;
+        var ww,hh
+        imgFile = e.target.result;
+        img.src=imgFile;
+        imgages.onload=function (ev1) {
+          console.log(imgages.width,imgages.height);
+          ww=imgages.width;
+          hh=imgages.height;
+          img.width=ww/4;
+          img.height=hh/4;
+          can.width = ww;
+          can.height = hh;
+          //
+          //人脸检测部分
+          var tracker = new tracking.ObjectTracker(['face']);
+          tracker.setStepSize(1.7);
+          btn.onclick = function (ev) {
+            console.log(1111);
+            console.log(document.querySelectorAll(".download"));
+            if(document.querySelectorAll(".download")){
+              for(var i=0;i<document.querySelectorAll(".download").length;i++){
+                document.querySelectorAll(".download")[i].click()
+              }
+            }
+          }
+          tracking.track('#img', tracker);
+          tracker.on('track', function (event) {
+            event.data.forEach(function (rect, index) {
+              context.strokeStyle = '#f00';
+              rect.height = rect.height + rect.height * 0.3;
+              var cans = document.createElement("canvas");
+              cans.width = rect.width;
+              cans.height = rect.height;
+              cans.id = "id" + index;
+              var canxs = cans.getContext("2d");
+              console.log(rect.x, rect.y, rect.width, rect.height)
+              canxs.drawImage(img,  rect.x*4 , rect.y*4 ,rect.width*4, rect.height*4, 0, 0, rect.width, rect.height);
+              face.appendChild(cans)
+              context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+              //转img
+              var dataURL = cans.toDataURL("image/png", 1.0);
+              var file1 = convertBase64UrlToBlob(dataURL, "png");
+              var reader = new window.FileReader();
+              var base64data;
+              reader.readAsDataURL(file1);
+              reader.onloadend = function () {
+                base64data = reader.result;
+                //console.log(base64data );
+                var imggg = document.createElement("img");
+                var aHref=document.createElement("a");
+                aHref.classList.add("download");
+                aHref.download=Date.parse(new Date())+index+".png"
+                aHref.href=base64data;
+                imggg.src = base64data;
+                imggg.style.visibility="hidden"
+                document.getElementById("face").appendChild(imggg)
+                document.getElementById("face").appendChild(aHref)
+              }
+            });
+          });
+
+
+        }
+
+      };
+    }
+  };
+</script>
+
+</body>
+</html>
